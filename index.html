@@ -333,37 +333,52 @@ input,textarea{font-family:inherit;background:none;border:none;color:inherit;fon
 .summary .accent{color:var(--green);font-weight:600}
 
 /* STORE */
-.store-item{
-  display:flex;align-items:center;gap:12px;
+.store-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:10px;
+}
+.store-card{
   background:var(--surface);
   border:1px solid var(--border);
-  border-radius:12px;
-  padding:14px 16px;
+  border-radius:14px;
+  padding:16px 14px 14px;
+  display:flex;flex-direction:column;align-items:flex-start;gap:0;
+  position:relative;
 }
-.store-item + .store-item{margin-top:8px}
-.store-item-main{flex:1;min-width:0}
-.store-item-name{font-size:16px;font-weight:500;letter-spacing:-0.01em}
-.store-item-owned{font-size:12px;color:var(--muted);margin-top:3px}
-.store-item-price{
-  font-size:14px;font-weight:600;color:var(--green);
+.store-card-icon{
+  width:38px;height:38px;border-radius:10px;
+  background:var(--green-bg);
+  border:1px solid var(--green-deep);
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:10px;
+  color:var(--green);
+}
+.store-card-name{
+  font-size:14px;font-weight:500;
+  letter-spacing:-0.01em;
+  line-height:1.3;
+  margin-bottom:4px;
+  word-break:break-word;
+}
+.store-card-price{
+  font-size:12px;color:var(--muted);
   font-variant-numeric:tabular-nums;
-  white-space:nowrap;
+  margin-bottom:12px;
 }
-.store-item-buy{
+.store-card-buy{
+  width:100%;
   background:var(--green);color:var(--bg);
   font-weight:600;font-size:13px;
-  padding:8px 14px;border-radius:8px;
-  min-height:36px;
-}
-.store-item-buy:disabled{background:var(--surface3);color:var(--muted)}
-.empty{
+  padding:8px 0;border-radius:8px;
   text-align:center;
-  color:var(--muted);
-  font-size:14px;
-  padding:48px 20px;
-  line-height:1.5;
 }
-.empty strong{display:block;color:var(--text2);font-size:15px;font-weight:500;margin-bottom:6px}
+.store-card-buy:disabled{background:var(--surface3);color:var(--muted)}
+.store-card-del{
+  position:absolute;top:10px;right:10px;
+  color:var(--muted);font-size:16px;
+  width:28px;height:28px;display:flex;align-items:center;justify-content:center;
+  border-radius:6px;
+}
+.store-card-del:active{color:var(--red);background:var(--red-bg)}
 
 /* INVENTORY */
 .inv-item{
@@ -376,6 +391,13 @@ input,textarea{font-family:inherit;background:none;border:none;color:inherit;fon
 .inv-item + .inv-item{margin-top:8px}
 .inv-item-main{flex:1;min-width:0}
 .inv-item-name{font-size:15px;font-weight:500;letter-spacing:-0.01em}
+.inv-item-qty{
+  display:inline-block;
+  font-size:11px;font-weight:600;
+  background:var(--surface3);color:var(--text2);
+  border-radius:4px;padding:1px 6px;
+  margin-left:6px;vertical-align:middle;
+}
 .inv-item-meta{font-size:12px;color:var(--muted);margin-top:3px}
 .inv-item-use{
   background:var(--surface3);color:var(--text);
@@ -385,22 +407,26 @@ input,textarea{font-family:inherit;background:none;border:none;color:inherit;fon
   min-height:36px;
 }
 .inv-item-use:active{background:var(--surface2)}
-.store-delete{
+
+.empty{
+  text-align:center;
   color:var(--muted);
-  padding:8px;border-radius:6px;
+  font-size:14px;
+  padding:48px 20px;
+  line-height:1.5;
+}
+.empty strong{display:block;color:var(--text2);font-size:15px;font-weight:500;margin-bottom:6px}
+
+/* USED HISTORY ROW */
+.used-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:8px 0;
+  border-bottom:1px solid var(--border);
   font-size:13px;
 }
-.store-delete:active{color:var(--red)}
-.type-badge{
-  display:inline-block;
-  font-size:10px;font-weight:600;
-  text-transform:uppercase;letter-spacing:0.06em;
-  padding:2px 6px;border-radius:4px;
-  margin-left:6px;
-  vertical-align:middle;
-}
-.type-badge.repeatable{background:var(--blue-bg);color:var(--blue)}
-.type-badge.oneoff{background:var(--surface3);color:var(--muted)}
+.used-row:last-child{border-bottom:none}
+.used-row-label{color:var(--text2)}
+.used-row-date{color:var(--muted);font-size:12px}
 
 /* HISTORY */
 .history-row{
@@ -488,7 +514,8 @@ const DEFAULT_STATE = {
   credits: 10,
   bets: [],          // {id, label, target, deadline, odds, stake, logs:{date:bool}, status:'active'|'won'|'lost', resolvedAt}
   storeItems: [],    // {id, label, price, type:'repeatable'|'oneoff'}
-  inventory: [],     // {id, itemId, label, boughtAt}
+  inventory: [],     // {id, itemId, label, qty, boughtAt}
+  usedItems: [],     // {label, usedAt} last 20
   resetCount: 0,
   startedAt: new Date().toISOString(),
 };
@@ -855,22 +882,46 @@ function AddBetScreen({ state, setState, onDone }) {
 }
 
 // ----- STORE -----
+const BagIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+    <line x1="3" y1="6" x2="21" y2="6"/>
+    <path d="M16 10a4 4 0 01-8 0"/>
+  </svg>
+);
+
 function StoreScreen({ state, setState, goAdd }) {
   const buy = (id) => {
     setState(s => {
       const item = s.storeItems.find(i => i.id === id);
       if (!item || s.credits < item.price) return s;
       const inventory = [...(s.inventory || [])];
-      inventory.push({ id: 'inv_' + Date.now(), itemId: id, label: item.label, boughtAt: todayStr() });
-      const storeItems = item.type === 'oneoff'
-        ? s.storeItems.filter(i => i.id !== id)
-        : s.storeItems;
-      return { ...s, credits: s.credits - item.price, storeItems, inventory };
+      // Check if item already in inventory (group by itemId)
+      const existing = inventory.find(i => i.itemId === id);
+      if (existing) {
+        const newInv = inventory.map(i => i.itemId === id ? { ...i, qty: (i.qty||1) + 1 } : i);
+        const storeItems = item.type === 'oneoff' ? s.storeItems.filter(i => i.id !== id) : s.storeItems;
+        return { ...s, credits: s.credits - item.price, storeItems, inventory: newInv };
+      } else {
+        inventory.push({ id: 'inv_' + Date.now(), itemId: id, label: item.label, qty: 1, boughtAt: todayStr() });
+        const storeItems = item.type === 'oneoff' ? s.storeItems.filter(i => i.id !== id) : s.storeItems;
+        return { ...s, credits: s.credits - item.price, storeItems, inventory };
+      }
     });
   };
 
   const useItem = (invId) => {
-    setState(s => ({ ...s, inventory: (s.inventory || []).filter(i => i.id !== invId) }));
+    setState(s => {
+      const inv = s.inventory || [];
+      const item = inv.find(i => i.id === invId);
+      if (!item) return s;
+      const usedItems = [...(s.usedItems || [])];
+      usedItems.unshift({ label: item.label, usedAt: todayStr() });
+      const newInv = item.qty > 1
+        ? inv.map(i => i.id === invId ? { ...i, qty: i.qty - 1 } : i)
+        : inv.filter(i => i.id !== invId);
+      return { ...s, inventory: newInv, usedItems: usedItems.slice(0, 20) };
+    });
   };
 
   const deleteStoreItem = (id) => {
@@ -878,7 +929,6 @@ function StoreScreen({ state, setState, goAdd }) {
   };
 
   const inventory = state.inventory || [];
-  // Only show items still available: repeatable always, oneoff only if not yet bought
   const available = state.storeItems;
 
   if (available.length === 0 && inventory.length === 0) {
@@ -895,38 +945,37 @@ function StoreScreen({ state, setState, goAdd }) {
 
   return (
     <div>
+      {available.length > 0 && <>
+        <div className="section-label" style={{marginTop:0}}>Store</div>
+        <div className="store-grid">
+          {available.map(item => (
+            <div key={item.id} className="store-card">
+              <button className="store-card-del" onClick={() => deleteStoreItem(item.id)}>✕</button>
+              <div className="store-card-icon"><BagIcon/></div>
+              <div className="store-card-name">{item.label}</div>
+              <div className="store-card-price">{item.price} credit{item.price===1?'':'s'}</div>
+              <button
+                className="store-card-buy"
+                onClick={() => buy(item.id)}
+                disabled={state.credits < item.price}
+              >Buy</button>
+            </div>
+          ))}
+        </div>
+      </>}
+
       {inventory.length > 0 && <>
         <div className="section-label">Inventory</div>
         {inventory.map(inv => (
           <div key={inv.id} className="inv-item">
             <div className="inv-item-main">
-              <div className="inv-item-name">{inv.label}</div>
+              <div className="inv-item-name">
+                {inv.label}
+                {inv.qty > 1 && <span className="inv-item-qty">×{inv.qty}</span>}
+              </div>
               <div className="inv-item-meta">bought {formatDate(inv.boughtAt)}</div>
             </div>
             <button className="inv-item-use" onClick={() => useItem(inv.id)}>Use</button>
-          </div>
-        ))}
-      </>}
-
-      {available.length > 0 && <>
-        <div className="section-label">Store</div>
-        {available.map(item => (
-          <div key={item.id} className="store-item">
-            <div className="store-item-main">
-              <div className="store-item-name">
-                {item.label}
-                <span className={`type-badge ${item.type || 'repeatable'}`}>
-                  {item.type === 'oneoff' ? 'one-off' : 'repeatable'}
-                </span>
-              </div>
-              <div className="store-item-owned">{item.price} credit{item.price===1?'':'s'}</div>
-            </div>
-            <button className="store-delete" onClick={() => deleteStoreItem(item.id)}>Delete</button>
-            <button
-              className="store-item-buy"
-              onClick={() => buy(item.id)}
-              disabled={state.credits < item.price}
-            >Buy</button>
           </div>
         ))}
       </>}
@@ -1004,7 +1053,7 @@ function AddStoreItemScreen({ setState, onDone }) {
 }
 
 // ----- HISTORY -----
-function HistoryScreen({ state }) {
+function HistoryScreen({ state, setState }) {
   const resolved = useMemo(() =>
     state.bets.filter(b => b.status !== 'active').sort((a,b)=>(b.resolvedAt||'').localeCompare(a.resolvedAt||''))
   , [state.bets]);
@@ -1059,6 +1108,18 @@ function HistoryScreen({ state }) {
           </div>
         );
       })}
+
+      {(state.usedItems||[]).length > 0 && <>
+        <div className="section-label">Recently used</div>
+        <div className="card" style={{padding:'4px 16px'}}>
+          {(state.usedItems||[]).slice(0,5).map((u,i) => (
+            <div key={i} className="used-row">
+              <span className="used-row-label">{u.label}</span>
+              <span className="used-row-date">{formatDate(u.usedAt)}</span>
+            </div>
+          ))}
+        </div>
+      </>}
     </div>
   );
 }
@@ -1171,7 +1232,7 @@ function App() {
     body = <StoreScreen state={state} setState={setState} goAdd={() => setSubScreen('add-store-item')}/>;
   } else if (tab === 'history') {
     title = 'History';
-    body = <HistoryScreen state={state}/>;
+    body = <HistoryScreen state={state} setState={setState}/>;
   }
 
   return (
