@@ -365,6 +365,43 @@ input,textarea{font-family:inherit;background:none;border:none;color:inherit;fon
 }
 .empty strong{display:block;color:var(--text2);font-size:15px;font-weight:500;margin-bottom:6px}
 
+/* INVENTORY */
+.inv-item{
+  display:flex;align-items:center;gap:12px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:14px 16px;
+}
+.inv-item + .inv-item{margin-top:8px}
+.inv-item-main{flex:1;min-width:0}
+.inv-item-name{font-size:15px;font-weight:500;letter-spacing:-0.01em}
+.inv-item-meta{font-size:12px;color:var(--muted);margin-top:3px}
+.inv-item-use{
+  background:var(--surface3);color:var(--text);
+  border:1px solid var(--border2);
+  font-weight:600;font-size:13px;
+  padding:8px 14px;border-radius:8px;
+  min-height:36px;
+}
+.inv-item-use:active{background:var(--surface2)}
+.store-delete{
+  color:var(--muted);
+  padding:8px;border-radius:6px;
+  font-size:13px;
+}
+.store-delete:active{color:var(--red)}
+.type-badge{
+  display:inline-block;
+  font-size:10px;font-weight:600;
+  text-transform:uppercase;letter-spacing:0.06em;
+  padding:2px 6px;border-radius:4px;
+  margin-left:6px;
+  vertical-align:middle;
+}
+.type-badge.repeatable{background:var(--blue-bg);color:var(--blue)}
+.type-badge.oneoff{background:var(--surface3);color:var(--muted)}
+
 /* HISTORY */
 .history-row{
   display:flex;justify-content:space-between;align-items:center;
@@ -450,7 +487,8 @@ const STORAGE_KEY = 'stakes_v1';
 const DEFAULT_STATE = {
   credits: 10,
   bets: [],          // {id, label, target, deadline, odds, stake, logs:{date:bool}, status:'active'|'won'|'lost', resolvedAt}
-  storeItems: [],    // {id, label, price, owned}
+  storeItems: [],    // {id, label, price, type:'repeatable'|'oneoff'}
+  inventory: [],     // {id, itemId, label, boughtAt}
   resetCount: 0,
   startedAt: new Date().toISOString(),
 };
@@ -822,25 +860,34 @@ function StoreScreen({ state, setState, goAdd }) {
     setState(s => {
       const item = s.storeItems.find(i => i.id === id);
       if (!item || s.credits < item.price) return s;
-      return {
-        ...s,
-        credits: s.credits - item.price,
-        storeItems: s.storeItems.map(i => i.id === id ? { ...i, owned: (i.owned||0) + 1 } : i),
-      };
+      const inventory = [...(s.inventory || [])];
+      inventory.push({ id: 'inv_' + Date.now(), itemId: id, label: item.label, boughtAt: todayStr() });
+      const storeItems = item.type === 'oneoff'
+        ? s.storeItems.filter(i => i.id !== id)
+        : s.storeItems;
+      return { ...s, credits: s.credits - item.price, storeItems, inventory };
     });
   };
 
-  const removeItem = (id) => {
+  const useItem = (invId) => {
+    setState(s => ({ ...s, inventory: (s.inventory || []).filter(i => i.id !== invId) }));
+  };
+
+  const deleteStoreItem = (id) => {
     setState(s => ({ ...s, storeItems: s.storeItems.filter(i => i.id !== id) }));
   };
 
-  if (state.storeItems.length === 0) {
+  const inventory = state.inventory || [];
+  // Only show items still available: repeatable always, oneoff only if not yet bought
+  const available = state.storeItems;
+
+  if (available.length === 0 && inventory.length === 0) {
     return (
       <div className="empty">
         <strong>Store is empty.</strong>
         Add rewards to spend credits on.
         <div style={{marginTop:24}}>
-          <button className="primary-btn" onClick={goAdd} style={{maxWidth:220,margin:'0 auto'}}>Add an item</button>
+          <button className="primary-btn" onClick={goAdd} style={{maxWidth:220,margin:'0 auto',display:'block'}}>Add an item</button>
         </div>
       </div>
     );
@@ -848,21 +895,42 @@ function StoreScreen({ state, setState, goAdd }) {
 
   return (
     <div>
-      {state.storeItems.map(item => (
-        <div key={item.id} className="store-item">
-          <div className="store-item-main">
-            <div className="store-item-name">{item.label}</div>
-            <div className="store-item-owned">
-              {item.owned || 0} owned · {item.price} credit{item.price===1?'':'s'}
+      {inventory.length > 0 && <>
+        <div className="section-label">Inventory</div>
+        {inventory.map(inv => (
+          <div key={inv.id} className="inv-item">
+            <div className="inv-item-main">
+              <div className="inv-item-name">{inv.label}</div>
+              <div className="inv-item-meta">bought {formatDate(inv.boughtAt)}</div>
             </div>
+            <button className="inv-item-use" onClick={() => useItem(inv.id)}>Use</button>
           </div>
-          <button
-            className="store-item-buy"
-            onClick={() => buy(item.id)}
-            disabled={state.credits < item.price}
-          >Buy</button>
-        </div>
-      ))}
+        ))}
+      </>}
+
+      {available.length > 0 && <>
+        <div className="section-label">Store</div>
+        {available.map(item => (
+          <div key={item.id} className="store-item">
+            <div className="store-item-main">
+              <div className="store-item-name">
+                {item.label}
+                <span className={`type-badge ${item.type || 'repeatable'}`}>
+                  {item.type === 'oneoff' ? 'one-off' : 'repeatable'}
+                </span>
+              </div>
+              <div className="store-item-owned">{item.price} credit{item.price===1?'':'s'}</div>
+            </div>
+            <button className="store-delete" onClick={() => deleteStoreItem(item.id)}>Delete</button>
+            <button
+              className="store-item-buy"
+              onClick={() => buy(item.id)}
+              disabled={state.credits < item.price}
+            >Buy</button>
+          </div>
+        ))}
+      </>}
+
       <div className="fab-spacer"/>
       <button className="primary-btn" onClick={goAdd}>Add item</button>
     </div>
@@ -872,6 +940,7 @@ function StoreScreen({ state, setState, goAdd }) {
 function AddStoreItemScreen({ setState, onDone }) {
   const [label, setLabel] = useState('');
   const [price, setPrice] = useState(5);
+  const [type, setType] = useState('repeatable');
   const valid = label.trim().length > 0 && price >= 1;
 
   const submit = () => {
@@ -880,7 +949,7 @@ function AddStoreItemScreen({ setState, onDone }) {
       id: 'item_' + Date.now(),
       label: label.trim(),
       price,
-      owned: 0,
+      type,
       addedAt: todayStr(),
     };
     setState(s => ({ ...s, storeItems: [...s.storeItems, item] }));
@@ -902,6 +971,14 @@ function AddStoreItemScreen({ setState, onDone }) {
       </div>
 
       <div className="field">
+        <label className="field-label">Type</label>
+        <div className="segmented">
+          <button className={type==='repeatable'?'on':''} onClick={() => setType('repeatable')}>Repeatable</button>
+          <button className={type==='oneoff'?'on':''} onClick={() => setType('oneoff')}>One-off</button>
+        </div>
+      </div>
+
+      <div className="field">
         <label className="field-label">Price (credits)</label>
         <div className="stepper">
           <button onClick={() => setPrice(Math.max(1, price-1))} disabled={price<=1}>−</button>
@@ -911,7 +988,11 @@ function AddStoreItemScreen({ setState, onDone }) {
       </div>
 
       <div className="summary">
-        Once added, the price <strong>cannot be changed</strong>.
+        {type === 'oneoff'
+          ? <><strong>One-off</strong> — disappears from the store after purchase.</>
+          : <><strong>Repeatable</strong> — stays in the store, buy as many times as you want.</>
+        }
+        {' '}Price <strong>cannot be changed</strong> once added.
       </div>
 
       <div className="fab-spacer"/>
@@ -992,7 +1073,8 @@ function BrokeScreen({ state, setState }) {
       credits: 10,
       resetCount: (s.resetCount || 0) + 1,
       startedAt: new Date().toISOString(),
-      storeItems: s.storeItems.map(i => ({ ...i, owned: 0 })), // keep store, reset owned
+      storeItems: s.storeItems, // keep store items
+      inventory: [],            // wipe inventory
     }));
   };
 
