@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Stakes">
+<meta name="theme-color" content="#0f0f0f">
+<title>Stakes</title>
+<link rel="manifest" href="data:application/json;charset=utf-8,%7B%22name%22%3A%22Stakes%22%2C%22short_name%22%3A%22Stakes%22%2C%22start_url%22%3A%22.%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230f0f0f%22%2C%22theme_color%22%3A%22%230f0f0f%22%7D">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0f0f0f;
+  --surface:#181818;
+  --surface2:#1f1f1f;
+  --surface3:#252525;
+  --border:#2a2a2a;
+  --border2:#333;
+  --text:#f0f0f0;
+  --text2:#a0a0a0;
+  --muted:#666;
+  --dim:#3a3a3a;
+  --green:#4caf7d;
+  --green-deep:#1f5a3f;
+  --green-bg:#15291f;
+  --red:#e05555;
+  --red-bg:#2a1414;
+  --amber:#f0a040;
+  --amber-bg:#2a1f10;
+  --blue:#3b82f6;
+  --blue-bg:#0f1f3d;
+  --nav-h:72px;
+  --header-h:56px;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+html,body{
+  height:100%;
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+  font-size:16px;
+  overflow:hidden;
+  overscroll-behavior:none;
+  -webkit-font-smoothing:antialiased;
+}
+body{position:fixed;width:100%;height:100%}
+#root{height:100%}
+button{font-family:inherit;background:none;border:none;color:inherit;cursor:pointer;font-size:inherit}
+input,textarea{font-family:inherit;background:none;border:none;color:inherit;font-size:inherit;outline:none}
+
+/* APP SHELL */
+.app{
+  display:flex;flex-direction:column;
+  height:100%;
+  max-width:480px;margin:0 auto;
+  position:relative;
+  background:var(--bg);
+}
+
+/* HEADER (locked) */
+.header{
+  flex:0 0 auto;
+  padding-top:var(--safe-top);
+  background:var(--bg);
+  border-bottom:1px solid var(--border);
+  z-index:10;
+}
+.header-inner{
+  height:var(--header-h);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;
+}
+.header-title{font-size:17px;font-weight:600;letter-spacing:-0.01em}
+.header-back{
+  display:flex;align-items:center;gap:4px;
+  color:var(--green);font-size:15px;font-weight:500;
+  margin-left:-8px;padding:8px;
+  min-width:44px;min-height:44px;
+}
+.header-back svg{flex-shrink:0}
+.header-action{
+  color:var(--green);font-size:15px;font-weight:500;
+  padding:8px;margin-right:-8px;
+  min-height:44px;
+}
+.header-action:disabled{color:var(--muted);opacity:0.5}
+.header-spacer{width:44px}
+.credits-pill{
+  display:flex;align-items:center;gap:6px;
+  background:var(--green-bg);
+  border:1px solid var(--green-deep);
+  border-radius:999px;
+  padding:5px 12px;
+  font-size:13px;font-weight:600;
+  color:var(--green);
+}
+.credits-pill .dot{
+  width:6px;height:6px;border-radius:50%;background:var(--green);
+}
+
+/* CONTENT (scrollable) */
+.content{
+  flex:1 1 auto;
+  overflow-y:auto;
+  overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-y:contain;
+  padding:16px 20px calc(var(--nav-h) + var(--safe-bottom) + 24px);
+}
+.content::-webkit-scrollbar{display:none}
+
+/* NAV (locked bottom) */
+.nav{
+  position:absolute;bottom:0;left:0;right:0;
+  height:calc(var(--nav-h) + var(--safe-bottom));
+  padding-bottom:var(--safe-bottom);
+  background:var(--bg);
+  border-top:1px solid var(--border);
+  display:grid;grid-template-columns:repeat(5,1fr);
+  z-index:10;
+}
+.nav-btn{
+  display:flex;align-items:center;justify-content:center;
+  color:var(--muted);
+  position:relative;
+  transition:color 0.15s;
+}
+.nav-btn.active{color:var(--text)}
+.nav-btn .pill{
+  display:flex;align-items:center;justify-content:center;
+  width:48px;height:32px;border-radius:8px;
+  transition:background 0.15s;
+}
+.nav-btn.active .pill{background:var(--text)}
+.nav-btn.active .pill svg{color:var(--bg)}
+.nav-btn.plus .pill{
+  width:44px;height:44px;border-radius:50%;
+  background:var(--green);
+  color:var(--bg);
+}
+.nav-btn.plus.active .pill{background:var(--green)}
+.nav-btn.plus.active .pill svg{color:var(--bg)}
+
+/* CARDS */
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:16px;
+}
+.card + .card{margin-top:12px}
+.section-label{
+  font-size:11px;font-weight:600;
+  color:var(--muted);
+  text-transform:uppercase;letter-spacing:0.08em;
+  margin:24px 4px 10px;
+}
+.section-label:first-child{margin-top:0}
+
+/* TODAY: bet rows */
+.bet-row{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 16px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:12px;
+}
+.bet-row + .bet-row{margin-top:8px}
+.bet-row-main{flex:1;min-width:0}
+.bet-row-title{font-size:16px;font-weight:500;letter-spacing:-0.01em}
+.bet-row-sub{font-size:13px;color:var(--text2);margin-top:3px}
+.bet-row-progress{font-size:12px;color:var(--muted);margin-top:4px;font-variant-numeric:tabular-nums}
+
+/* Toggle */
+.toggle{
+  flex:0 0 auto;
+  width:44px;height:28px;border-radius:14px;
+  background:var(--surface3);
+  border:1px solid var(--border2);
+  position:relative;
+  transition:background 0.2s,border-color 0.2s;
+}
+.toggle .knob{
+  position:absolute;top:2px;left:2px;
+  width:22px;height:22px;border-radius:50%;
+  background:var(--muted);
+  transition:left 0.2s,background 0.2s;
+  display:flex;align-items:center;justify-content:center;
+}
+.toggle.on{background:var(--green-bg);border-color:var(--green-deep)}
+.toggle.on .knob{left:18px;background:var(--green)}
+.toggle.on .knob svg{color:var(--bg)}
+.toggle.disabled{opacity:0.4;pointer-events:none}
+
+/* BETS list */
+.bet-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:16px;
+}
+.bet-card + .bet-card{margin-top:10px}
+.bet-card.won{background:var(--green-bg);border-color:var(--green-deep)}
+.bet-card.lost{background:var(--red-bg);border-color:#5a2828}
+.bet-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.bet-card-title{font-size:16px;font-weight:500;letter-spacing:-0.01em}
+.bet-card-meta{font-size:13px;color:var(--text2);margin-top:4px}
+.bet-card-status{
+  flex:0 0 auto;
+  font-size:11px;font-weight:600;
+  text-transform:uppercase;letter-spacing:0.06em;
+  padding:4px 8px;border-radius:6px;
+}
+.status-active{background:var(--blue-bg);color:var(--blue)}
+.status-won{background:var(--green);color:var(--bg)}
+.status-lost{background:var(--red);color:#fff}
+.bet-card-bar{
+  margin-top:12px;
+  height:6px;background:var(--surface3);border-radius:3px;overflow:hidden;
+}
+.bet-card-bar-fill{
+  height:100%;background:var(--green);
+  transition:width 0.3s;
+}
+.bet-card.lost .bet-card-bar-fill{background:var(--red)}
+.bet-card.won .bet-card-bar-fill{background:var(--green)}
+.bet-card-foot{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-top:10px;
+  font-size:12px;color:var(--text2);
+  font-variant-numeric:tabular-nums;
+}
+.bet-card-stake{color:var(--muted)}
+.bet-card-payout{color:var(--green);font-weight:600}
+.bet-card.lost .bet-card-payout{color:var(--red)}
+
+/* ADD BET form */
+.field{margin-bottom:18px}
+.field-label{
+  display:block;
+  font-size:12px;font-weight:600;
+  color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;
+  margin-bottom:8px;
+}
+.input{
+  width:100%;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:14px 16px;
+  font-size:16px;
+  color:var(--text);
+}
+.input:focus{border-color:var(--green-deep)}
+.input::placeholder{color:var(--muted)}
+.input[type=date]{
+  -webkit-appearance:none;appearance:none;
+  color-scheme:dark;
+}
+.row{display:flex;gap:10px}
+.row > *{flex:1}
+.segmented{
+  display:grid;grid-auto-flow:column;grid-auto-columns:1fr;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:4px;gap:4px;
+}
+.segmented button{
+  padding:12px 8px;border-radius:7px;
+  font-size:15px;font-weight:500;
+  color:var(--text2);
+  transition:background 0.15s,color 0.15s;
+}
+.segmented button.on{background:var(--green);color:var(--bg);font-weight:600}
+.stepper{
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:6px;
+}
+.stepper button{
+  width:44px;height:44px;border-radius:8px;
+  font-size:22px;font-weight:500;
+  background:var(--surface2);
+  color:var(--text);
+}
+.stepper button:disabled{color:var(--dim);background:transparent}
+.stepper .val{
+  font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;
+}
+.primary-btn{
+  width:100%;
+  background:var(--green);
+  color:var(--bg);
+  font-weight:600;font-size:16px;
+  padding:16px;border-radius:12px;
+  margin-top:8px;
+}
+.primary-btn:disabled{background:var(--surface3);color:var(--muted)}
+.danger-btn{
+  width:100%;
+  background:var(--red-bg);
+  color:var(--red);
+  border:1px solid var(--red);
+  font-weight:600;font-size:16px;
+  padding:16px;border-radius:12px;
+}
+.summary{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:14px 16px;
+  font-size:14px;color:var(--text2);
+  line-height:1.5;
+}
+.summary strong{color:var(--text);font-weight:600}
+.summary .accent{color:var(--green);font-weight:600}
+
+/* STORE */
+.store-item{
+  display:flex;align-items:center;gap:12px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:14px 16px;
+}
+.store-item + .store-item{margin-top:8px}
+.store-item-main{flex:1;min-width:0}
+.store-item-name{font-size:16px;font-weight:500;letter-spacing:-0.01em}
+.store-item-owned{font-size:12px;color:var(--muted);margin-top:3px}
+.store-item-price{
+  font-size:14px;font-weight:600;color:var(--green);
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+.store-item-buy{
+  background:var(--green);color:var(--bg);
+  font-weight:600;font-size:13px;
+  padding:8px 14px;border-radius:8px;
+  min-height:36px;
+}
+.store-item-buy:disabled{background:var(--surface3);color:var(--muted)}
+.empty{
+  text-align:center;
+  color:var(--muted);
+  font-size:14px;
+  padding:48px 20px;
+  line-height:1.5;
+}
+.empty strong{display:block;color:var(--text2);font-size:15px;font-weight:500;margin-bottom:6px}
+
+/* HISTORY */
+.history-row{
+  display:flex;justify-content:space-between;align-items:center;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:12px 14px;
+  gap:10px;
+}
+.history-row + .history-row{margin-top:6px}
+.history-row.won{border-left:3px solid var(--green)}
+.history-row.lost{border-left:3px solid var(--red)}
+.history-main{flex:1;min-width:0}
+.history-title{font-size:14px;font-weight:500}
+.history-meta{font-size:12px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
+.history-amount{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+.history-amount.win{color:var(--green)}
+.history-amount.loss{color:var(--red)}
+
+/* MODAL */
+.modal-overlay{
+  position:absolute;inset:0;
+  background:rgba(0,0,0,0.6);
+  display:flex;align-items:flex-end;justify-content:center;
+  z-index:20;
+  animation:fadeIn 0.2s;
+}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{
+  background:var(--surface2);
+  border-radius:16px 16px 0 0;
+  width:100%;
+  padding:24px 20px calc(20px + var(--safe-bottom));
+  animation:slideUp 0.25s cubic-bezier(0.2,0.8,0.2,1);
+}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal h2{font-size:18px;font-weight:600;margin-bottom:8px}
+.modal p{font-size:14px;color:var(--text2);line-height:1.5;margin-bottom:20px}
+
+/* Reset / broke screen */
+.broke{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;
+  padding:40px 24px;
+  min-height:60vh;
+}
+.broke h1{font-size:32px;font-weight:700;letter-spacing:-0.02em;margin-bottom:12px}
+.broke p{font-size:15px;color:var(--text2);line-height:1.6;margin-bottom:32px;max-width:320px}
+.broke-amount{
+  font-size:64px;font-weight:700;color:var(--red);
+  font-variant-numeric:tabular-nums;
+  letter-spacing:-0.03em;
+  margin-bottom:8px;
+}
+
+/* Inline icon button */
+.icon-btn{
+  width:44px;height:44px;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--text2);
+  border-radius:8px;
+}
+.icon-btn:active{background:var(--surface2)}
+
+/* Active press feedback */
+.bet-row,.bet-card,.store-item,.history-row,.segmented button,.primary-btn,.danger-btn,.store-item-buy,.stepper button{
+  transition:transform 0.1s,opacity 0.1s,background 0.15s;
+}
+button:active:not(:disabled),.bet-row:active{transform:scale(0.98)}
+.toggle:active{transform:scale(0.95)}
+
+.fab-spacer{height:12px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useMemo, useRef } = React;
+
+// ---------- STORAGE ----------
+const STORAGE_KEY = 'stakes_v1';
+const DEFAULT_STATE = {
+  credits: 10,
+  bets: [],          // {id, label, target, deadline, odds, stake, logs:{date:bool}, status:'active'|'won'|'lost', resolvedAt}
+  storeItems: [],    // {id, label, price, owned}
+  resetCount: 0,
+  startedAt: new Date().toISOString(),
+};
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { ...DEFAULT_STATE };
+    return { ...DEFAULT_STATE, ...JSON.parse(raw) };
+  } catch { return { ...DEFAULT_STATE }; }
+}
+function saveState(s) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch {}
+}
+
+// ---------- DATE UTILS ----------
+function todayStr() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function daysBetween(a, b) {
+  const da = new Date(a + 'T00:00:00');
+  const db = new Date(b + 'T00:00:00');
+  return Math.round((db - da) / 86400000);
+}
+function formatDate(s) {
+  const d = new Date(s + 'T00:00:00');
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+function addDays(s, n) {
+  const d = new Date(s + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
+// ---------- BET LOGIC ----------
+function betProgress(bet) {
+  return Object.values(bet.logs || {}).filter(Boolean).length;
+}
+function daysRemaining(bet) {
+  return daysBetween(todayStr(), bet.deadline);
+}
+function isCompletableToday(bet) {
+  // Can toggle today if: active, today is on or before deadline, not yet logged today
+  if (bet.status !== 'active') return false;
+  const today = todayStr();
+  if (daysBetween(today, bet.deadline) < 0) return false;
+  return true;
+}
+function evaluateBet(bet) {
+  // Returns new status: 'active' | 'won' | 'lost'
+  // Per spec: WON resolves only on deadline. LOST resolves immediately when impossible.
+  if (bet.status !== 'active') return bet.status;
+  const progress = betProgress(bet);
+  const today = todayStr();
+  const daysLeft = daysBetween(today, bet.deadline); // includes today if same date
+
+  // If past deadline: resolve
+  if (daysLeft < 0) {
+    return progress >= bet.target ? 'won' : 'lost';
+  }
+  // If exactly on deadline (daysLeft === 0): can still complete today
+  // Otherwise check if reachable: progress + (daysLeft + 1) >= target ?
+  // +1 because daysLeft=0 means today is the deadline, still 1 day to act
+  const remainingOpportunities = daysLeft + 1;
+  if (progress + remainingOpportunities < bet.target) return 'lost';
+  return 'active';
+}
+
+// Run on app open / day change: resolve any bets that should be resolved
+function reconcileBets(state) {
+  let credits = state.credits;
+  let changed = false;
+  const bets = state.bets.map(bet => {
+    if (bet.status !== 'active') return bet;
+    const newStatus = evaluateBet(bet);
+    const today = todayStr();
+    if (newStatus === 'won') {
+      // Only pay out if deadline has passed (or is today)
+      const daysLeft = daysBetween(today, bet.deadline);
+      if (daysLeft <= -1) {
+        credits += bet.stake * bet.odds;
+        changed = true;
+        return { ...bet, status:'won', resolvedAt: today };
+      }
+      // Target met but still before deadline: keep active
+      return bet;
+    }
+    if (newStatus === 'lost') {
+      credits -= bet.stake;
+      changed = true;
+      return { ...bet, status:'lost', resolvedAt: today };
+    }
+    return bet;
+  });
+  if (!changed) return state;
+  return { ...state, credits, bets };
+}
+
+// ---------- UI ICONS ----------
+const I = {
+  check: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+  back: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>,
+  plus: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+  today: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+  bets: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>,
+  store: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l1-5h16l1 5"/><path d="M5 9v11h14V9"/><path d="M9 14h6"/></svg>,
+  history: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><polyline points="3 3 3 8 8 8"/><polyline points="12 7 12 12 15 14"/></svg>,
+  trash: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14H7L5 6"/><path d="M10 11v6M14 11v6"/></svg>,
+};
+
+// ---------- COMPONENTS ----------
+function Header({ title, onBack, action, credits, showCredits=true }) {
+  return (
+    <div className="header">
+      <div className="header-inner">
+        {onBack ? (
+          <button className="header-back" onClick={onBack}>{I.back}<span>Back</span></button>
+        ) : <div className="header-spacer" />}
+        <div className="header-title">{title}</div>
+        {action ? action : (showCredits && credits != null ? (
+          <div className="credits-pill"><span className="dot"/>{credits}</div>
+        ) : <div className="header-spacer" />)}
+      </div>
+    </div>
+  );
+}
+
+function Nav({ tab, setTab, setSubScreen }) {
+  const items = [
+    { id:'today', icon:I.today },
+    { id:'bets', icon:I.bets },
+    { id:'add', icon:I.plus, plus:true },
+    { id:'store', icon:I.store },
+    { id:'history', icon:I.history },
+  ];
+  return (
+    <div className="nav">
+      {items.map(it => (
+        <button
+          key={it.id}
+          className={`nav-btn ${it.plus?'plus':''} ${tab===it.id?'active':''}`}
+          onClick={() => { setTab(it.id); setSubScreen(null); }}
+        >
+          <div className="pill">{it.icon}</div>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ----- TODAY -----
+function TodayScreen({ state, setState }) {
+  const today = todayStr();
+  const activeBets = state.bets.filter(b => b.status === 'active' && daysBetween(today, b.deadline) >= 0);
+
+  const toggleToday = (betId) => {
+    setState(s => {
+      const bets = s.bets.map(b => {
+        if (b.id !== betId) return b;
+        const logs = { ...(b.logs || {}) };
+        logs[today] = !logs[today];
+        return { ...b, logs };
+      });
+      return { ...s, bets };
+    });
+  };
+
+  if (activeBets.length === 0) {
+    return (
+      <div className="empty">
+        <strong>Nothing on the line today.</strong>
+        Tap + to add a bet.
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {activeBets.map(bet => {
+        const done = !!(bet.logs && bet.logs[today]);
+        const progress = betProgress(bet);
+        const left = daysRemaining(bet);
+        return (
+          <div key={bet.id} className="bet-row" onClick={() => toggleToday(bet.id)}>
+            <div className="bet-row-main">
+              <div className="bet-row-title">{bet.label}</div>
+              <div className="bet-row-progress">
+                {progress}/{bet.target} done · {left === 0 ? 'due today' : `${left} day${left===1?'':'s'} left`}
+              </div>
+            </div>
+            <div className={`toggle ${done?'on':''}`}>
+              <div className="knob">{done && I.check}</div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ----- BETS -----
+function BetsScreen({ state }) {
+  const today = todayStr();
+  const sorted = useMemo(() => {
+    // Active first (by deadline asc), then resolved (most recent first)
+    const active = state.bets.filter(b => b.status === 'active').sort((a,b)=>a.deadline.localeCompare(b.deadline));
+    const resolved = state.bets.filter(b => b.status !== 'active').sort((a,b)=>(b.resolvedAt||'').localeCompare(a.resolvedAt||''));
+    return [...active, ...resolved];
+  }, [state.bets]);
+
+  if (sorted.length === 0) {
+    return (
+      <div className="empty">
+        <strong>No bets yet.</strong>
+        Add one to put credits on the line.
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {sorted.map(bet => {
+        const progress = betProgress(bet);
+        const pct = Math.min(100, (progress / bet.target) * 100);
+        const left = daysRemaining(bet);
+        const status = bet.status;
+        const payout = bet.stake * bet.odds;
+        return (
+          <div key={bet.id} className={`bet-card ${status}`}>
+            <div className="bet-card-head">
+              <div style={{flex:1,minWidth:0}}>
+                <div className="bet-card-title">{bet.label}</div>
+                <div className="bet-card-meta">
+                  {progress}/{bet.target} · by {formatDate(bet.deadline)}
+                  {status === 'active' && (left >= 0 ? ` · ${left === 0 ? 'due today' : `${left} day${left===1?'':'s'} left`}` : '')}
+                </div>
+              </div>
+              <div className={`bet-card-status status-${status}`}>{status}</div>
+            </div>
+            <div className="bet-card-bar">
+              <div className="bet-card-bar-fill" style={{width:`${pct}%`}}/>
+            </div>
+            <div className="bet-card-foot">
+              <div className="bet-card-stake">stake {bet.stake} · {bet.odds}x</div>
+              <div className="bet-card-payout">
+                {status==='won' ? `+${payout}` : status==='lost' ? `−${bet.stake}` : `→ +${payout}`}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ----- ADD BET -----
+function AddBetScreen({ state, setState, onDone }) {
+  const [label, setLabel] = useState('');
+  const [target, setTarget] = useState(3);
+  const [deadline, setDeadline] = useState(addDays(todayStr(), 7));
+  const [odds, setOdds] = useState(2);
+  const [stake, setStake] = useState(1);
+
+  const minDate = todayStr();
+  const valid = label.trim().length > 0 && target >= 1 && deadline >= minDate && stake <= state.credits;
+
+  const submit = () => {
+    if (!valid) return;
+    const bet = {
+      id: 'bet_' + Date.now(),
+      label: label.trim(),
+      target,
+      deadline,
+      odds,
+      stake,
+      logs: {},
+      status: 'active',
+      createdAt: todayStr(),
+    };
+    setState(s => ({ ...s, bets: [...s.bets, bet] }));
+    onDone();
+  };
+
+  const payout = stake * odds;
+
+  return (
+    <div>
+      <div className="field">
+        <label className="field-label">What are you betting on?</label>
+        <input
+          className="input"
+          type="text"
+          placeholder="e.g. workout 5 times"
+          value={label}
+          onChange={e => setLabel(e.target.value)}
+          maxLength={60}
+          autoFocus={false}
+        />
+      </div>
+
+      <div className="field">
+        <label className="field-label">Target count</label>
+        <div className="stepper">
+          <button onClick={() => setTarget(Math.max(1, target-1))} disabled={target<=1}>−</button>
+          <div className="val">{target}</div>
+          <button onClick={() => setTarget(Math.min(99, target+1))} disabled={target>=99}>+</button>
+        </div>
+      </div>
+
+      <div className="field">
+        <label className="field-label">Deadline</label>
+        <input
+          className="input"
+          type="date"
+          value={deadline}
+          min={minDate}
+          onChange={e => setDeadline(e.target.value)}
+        />
+      </div>
+
+      <div className="field">
+        <label className="field-label">Odds</label>
+        <div className="segmented">
+          {[2,3,5].map(n => (
+            <button key={n} className={odds===n?'on':''} onClick={() => setOdds(n)}>{n}x</button>
+          ))}
+        </div>
+      </div>
+
+      <div className="field">
+        <label className="field-label">Stake (credits)</label>
+        <div className="segmented">
+          {[1,2,3,4,5].map(n => (
+            <button
+              key={n}
+              className={stake===n?'on':''}
+              onClick={() => setStake(n)}
+              disabled={n > state.credits}
+            >{n}</button>
+          ))}
+        </div>
+      </div>
+
+      <div className="summary">
+        Risk <strong>{stake}</strong> · Win <span className="accent">+{payout}</span> · Lose <strong>−{stake}</strong>
+        <br/>
+        You have <strong>{state.credits}</strong> credit{state.credits===1?'':'s'}.
+      </div>
+
+      <div className="fab-spacer"/>
+      <button className="primary-btn" onClick={submit} disabled={!valid}>
+        Place bet
+      </button>
+    </div>
+  );
+}
+
+// ----- STORE -----
+function StoreScreen({ state, setState, goAdd }) {
+  const buy = (id) => {
+    setState(s => {
+      const item = s.storeItems.find(i => i.id === id);
+      if (!item || s.credits < item.price) return s;
+      return {
+        ...s,
+        credits: s.credits - item.price,
+        storeItems: s.storeItems.map(i => i.id === id ? { ...i, owned: (i.owned||0) + 1 } : i),
+      };
+    });
+  };
+
+  const removeItem = (id) => {
+    setState(s => ({ ...s, storeItems: s.storeItems.filter(i => i.id !== id) }));
+  };
+
+  if (state.storeItems.length === 0) {
+    return (
+      <div className="empty">
+        <strong>Store is empty.</strong>
+        Add rewards to spend credits on.
+        <div style={{marginTop:24}}>
+          <button className="primary-btn" onClick={goAdd} style={{maxWidth:220,margin:'0 auto'}}>Add an item</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {state.storeItems.map(item => (
+        <div key={item.id} className="store-item">
+          <div className="store-item-main">
+            <div className="store-item-name">{item.label}</div>
+            <div className="store-item-owned">
+              {item.owned || 0} owned · {item.price} credit{item.price===1?'':'s'}
+            </div>
+          </div>
+          <button
+            className="store-item-buy"
+            onClick={() => buy(item.id)}
+            disabled={state.credits < item.price}
+          >Buy</button>
+        </div>
+      ))}
+      <div className="fab-spacer"/>
+      <button className="primary-btn" onClick={goAdd}>Add item</button>
+    </div>
+  );
+}
+
+function AddStoreItemScreen({ setState, onDone }) {
+  const [label, setLabel] = useState('');
+  const [price, setPrice] = useState(5);
+  const valid = label.trim().length > 0 && price >= 1;
+
+  const submit = () => {
+    if (!valid) return;
+    const item = {
+      id: 'item_' + Date.now(),
+      label: label.trim(),
+      price,
+      owned: 0,
+      addedAt: todayStr(),
+    };
+    setState(s => ({ ...s, storeItems: [...s.storeItems, item] }));
+    onDone();
+  };
+
+  return (
+    <div>
+      <div className="field">
+        <label className="field-label">Reward</label>
+        <input
+          className="input"
+          type="text"
+          placeholder="e.g. 3 hours gaming"
+          value={label}
+          onChange={e => setLabel(e.target.value)}
+          maxLength={50}
+        />
+      </div>
+
+      <div className="field">
+        <label className="field-label">Price (credits)</label>
+        <div className="stepper">
+          <button onClick={() => setPrice(Math.max(1, price-1))} disabled={price<=1}>−</button>
+          <div className="val">{price}</div>
+          <button onClick={() => setPrice(Math.min(999, price+1))}>+</button>
+        </div>
+      </div>
+
+      <div className="summary">
+        Once added, the price <strong>cannot be changed</strong>.
+      </div>
+
+      <div className="fab-spacer"/>
+      <button className="primary-btn" onClick={submit} disabled={!valid}>
+        Add to store
+      </button>
+    </div>
+  );
+}
+
+// ----- HISTORY -----
+function HistoryScreen({ state }) {
+  const resolved = useMemo(() =>
+    state.bets.filter(b => b.status !== 'active').sort((a,b)=>(b.resolvedAt||'').localeCompare(a.resolvedAt||''))
+  , [state.bets]);
+
+  const totalWon = resolved.filter(b => b.status==='won').reduce((s,b)=>s + b.stake*b.odds, 0);
+  const totalLost = resolved.filter(b => b.status==='lost').reduce((s,b)=>s + b.stake, 0);
+
+  if (resolved.length === 0) {
+    return (
+      <div className="empty">
+        <strong>No history yet.</strong>
+        Resolved bets will show up here.
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="card" style={{display:'flex',justifyContent:'space-around',textAlign:'center'}}>
+        <div>
+          <div style={{fontSize:11,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'0.06em'}}>Won</div>
+          <div style={{fontSize:22,fontWeight:600,color:'var(--green)',marginTop:4,fontVariantNumeric:'tabular-nums'}}>+{totalWon}</div>
+        </div>
+        <div style={{width:1,background:'var(--border)'}}/>
+        <div>
+          <div style={{fontSize:11,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'0.06em'}}>Lost</div>
+          <div style={{fontSize:22,fontWeight:600,color:'var(--red)',marginTop:4,fontVariantNumeric:'tabular-nums'}}>−{totalLost}</div>
+        </div>
+        <div style={{width:1,background:'var(--border)'}}/>
+        <div>
+          <div style={{fontSize:11,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'0.06em'}}>Net</div>
+          <div style={{fontSize:22,fontWeight:600,color: totalWon-totalLost>=0?'var(--green)':'var(--red)',marginTop:4,fontVariantNumeric:'tabular-nums'}}>
+            {totalWon-totalLost>=0?'+':'−'}{Math.abs(totalWon-totalLost)}
+          </div>
+        </div>
+      </div>
+
+      <div className="section-label">All resolved</div>
+      {resolved.map(bet => {
+        const amt = bet.status==='won' ? bet.stake*bet.odds : bet.stake;
+        return (
+          <div key={bet.id} className={`history-row ${bet.status}`}>
+            <div className="history-main">
+              <div className="history-title">{bet.label}</div>
+              <div className="history-meta">
+                {betProgress(bet)}/{bet.target} · {bet.odds}x · {bet.resolvedAt ? formatDate(bet.resolvedAt) : ''}
+              </div>
+            </div>
+            <div className={`history-amount ${bet.status==='won'?'win':'loss'}`}>
+              {bet.status==='won' ? `+${amt}` : `−${amt}`}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ----- BROKE / RESET -----
+function BrokeScreen({ state, setState }) {
+  const [confirming, setConfirming] = useState(false);
+
+  const reset = () => {
+    setState(s => ({
+      ...DEFAULT_STATE,
+      credits: 10,
+      resetCount: (s.resetCount || 0) + 1,
+      startedAt: new Date().toISOString(),
+      storeItems: s.storeItems.map(i => ({ ...i, owned: 0 })), // keep store, reset owned
+    }));
+  };
+
+  return (
+    <div className="broke">
+      <div className="broke-amount">0</div>
+      <h1>You're broke.</h1>
+      <p>
+        All your tasks and bets will be wiped clean. Your store stays — but everything you owned is gone too.
+        Start over with 10 credits.
+      </p>
+      {!confirming ? (
+        <button className="danger-btn" onClick={() => setConfirming(true)} style={{maxWidth:280}}>
+          Buy new credits
+        </button>
+      ) : (
+        <div style={{width:'100%',maxWidth:280}}>
+          <div className="summary" style={{marginBottom:12,textAlign:'left'}}>
+            This wipes everything. Are you sure?
+          </div>
+          <button className="danger-btn" onClick={reset}>Yes, wipe and reset</button>
+          <button
+            onClick={() => setConfirming(false)}
+            style={{width:'100%',marginTop:10,padding:14,color:'var(--text2)',fontWeight:500}}
+          >Cancel</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------- ROOT APP ----------
+function App() {
+  const [state, setState] = useState(() => reconcileBets(loadState()));
+  const [tab, setTab] = useState('today');
+  const [subScreen, setSubScreen] = useState(null); // 'add-store-item' | null
+
+  // Save on every change
+  useEffect(() => { saveState(state); }, [state]);
+
+  // Reconcile bets on tab focus / day change
+  useEffect(() => {
+    const onFocus = () => setState(s => reconcileBets(s));
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onFocus);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onFocus);
+    };
+  }, []);
+
+  // Reconcile when bets/logs change (in case completing today's task makes win possible)
+  useEffect(() => {
+    setState(s => {
+      const r = reconcileBets(s);
+      if (r === s) return s;
+      return r;
+    });
+  }, [JSON.stringify(state.bets.map(b => ({id:b.id, logs:b.logs, status:b.status})))]);
+
+  // Broke screen takes over
+  if (state.credits <= 0) {
+    return (
+      <div className="app">
+        <Header title="Stakes" showCredits={false} action={<div className="header-spacer"/>}/>
+        <div className="content">
+          <BrokeScreen state={state} setState={setState}/>
+        </div>
+        <Nav tab={'today'} setTab={()=>{}} setSubScreen={()=>{}}/>
+      </div>
+    );
+  }
+
+  // Sub-screen routing
+  let title = '';
+  let body = null;
+  let onBack = null;
+
+  if (subScreen === 'add-store-item') {
+    title = 'New reward';
+    onBack = () => setSubScreen(null);
+    body = <AddStoreItemScreen setState={setState} onDone={() => setSubScreen(null)}/>;
+  } else if (tab === 'today') {
+    title = 'Today';
+    body = <TodayScreen state={state} setState={setState}/>;
+  } else if (tab === 'bets') {
+    title = 'Bets';
+    body = <BetsScreen state={state}/>;
+  } else if (tab === 'add') {
+    title = 'New bet';
+    body = <AddBetScreen state={state} setState={setState} onDone={() => setTab('bets')}/>;
+  } else if (tab === 'store') {
+    title = 'Store';
+    body = <StoreScreen state={state} setState={setState} goAdd={() => setSubScreen('add-store-item')}/>;
+  } else if (tab === 'history') {
+    title = 'History';
+    body = <HistoryScreen state={state}/>;
+  }
+
+  return (
+    <div className="app">
+      <Header title={title} onBack={onBack} credits={state.credits}/>
+      <div className="content">{body}</div>
+      <Nav tab={tab} setTab={setTab} setSubScreen={setSubScreen}/>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+// PWA: register service worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
