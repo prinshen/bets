@@ -1061,18 +1061,20 @@ function HistoryScreen({ state, setState }) {
   const totalWon = resolved.filter(b => b.status==='won').reduce((s,b)=>s + b.stake*b.odds, 0);
   const totalLost = resolved.filter(b => b.status==='lost').reduce((s,b)=>s + b.stake, 0);
 
-  if (resolved.length === 0) {
+  const usedItems = (state.usedItems || []).slice(0, 5);
+
+  if (resolved.length === 0 && usedItems.length === 0) {
     return (
       <div className="empty">
         <strong>No history yet.</strong>
-        Resolved bets will show up here.
+        Resolved bets and used store items will show up here.
       </div>
     );
   }
 
   return (
     <div>
-      <div className="card" style={{display:'flex',justifyContent:'space-around',textAlign:'center'}}>
+      {resolved.length > 0 && <div className="card" style={{display:'flex',justifyContent:'space-around',textAlign:'center'}}>
         <div>
           <div style={{fontSize:11,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'0.06em'}}>Won</div>
           <div style={{fontSize:22,fontWeight:600,color:'var(--green)',marginTop:4,fontVariantNumeric:'tabular-nums'}}>+{totalWon}</div>
@@ -1089,10 +1091,10 @@ function HistoryScreen({ state, setState }) {
             {totalWon-totalLost>=0?'+':'−'}{Math.abs(totalWon-totalLost)}
           </div>
         </div>
-      </div>
+      </div>}
 
-      <div className="section-label">All resolved</div>
-      {resolved.map(bet => {
+      {resolved.length > 0 && <div className="section-label">All resolved</div>}
+      {resolved.length > 0 && resolved.map(bet => {
         const amt = bet.status==='won' ? bet.stake*bet.odds : bet.stake;
         return (
           <div key={bet.id} className={`history-row ${bet.status}`}>
@@ -1109,10 +1111,10 @@ function HistoryScreen({ state, setState }) {
         );
       })}
 
-      {(state.usedItems||[]).length > 0 && <>
+      {usedItems.length > 0 && <>
         <div className="section-label">Recently used</div>
         <div className="card" style={{padding:'4px 16px'}}>
-          {(state.usedItems||[]).slice(0,5).map((u,i) => (
+          {usedItems.map((u,i) => (
             <div key={i} className="used-row">
               <span className="used-row-label">{u.label}</span>
               <span className="used-row-date">{formatDate(u.usedAt)}</span>
