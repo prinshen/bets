@@ -114,15 +114,14 @@ input,textarea{font-family:inherit;background:none;border:none;color:inherit;fon
   overflow-x:hidden;
   -webkit-overflow-scrolling:touch;
   overscroll-behavior-y:contain;
-  padding:16px 20px calc(var(--nav-h) + var(--safe-bottom) + 24px);
+  padding:16px 20px calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 24px);
 }
 .content::-webkit-scrollbar{display:none}
 
 /* NAV (locked bottom) */
 .nav{
   position:absolute;bottom:0;left:0;right:0;
-  height:calc(var(--nav-h) + var(--safe-bottom));
-  padding-bottom:var(--safe-bottom);
+  height:calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
   background:var(--bg);
   border-top:1px solid var(--border);
   display:grid;grid-template-columns:repeat(5,1fr);
@@ -130,6 +129,7 @@ input,textarea{font-family:inherit;background:none;border:none;color:inherit;fon
 }
 .nav-btn{
   display:flex;align-items:center;justify-content:center;
+  padding-bottom:env(safe-area-inset-bottom, 0px);
   color:var(--muted);
   position:relative;
   transition:color 0.15s;
