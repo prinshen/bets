@@ -1251,8 +1251,9 @@ function App() {
     });
   }, [JSON.stringify(state.bets.map(b => ({id:b.id, logs:b.logs, status:b.status})))]);
 
-  // Broke screen takes over
-  if (state.credits <= 0) {
+  // Broke screen takes over only when 0 credits AND no active bets that could still pay out
+  const hasActiveBets = state.bets.some(b => b.status === 'active');
+  if (state.credits <= 0 && !hasActiveBets) {
     return (
       <div className="app">
         <Header title="Stakes" showCredits={false} action={<div className="header-spacer"/>}/>
