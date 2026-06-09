@@ -1,4 +1,4 @@
-const CACHE = 'stakes-v2';
+const CACHE = 'stakes-v3';
 const ASSETS = ['./', './index.html'];
 
 self.addEventListener('install', e => {
