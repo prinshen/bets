@@ -733,25 +733,22 @@ function TodayScreen({ state, setState }) {
 // ----- BETS -----
 function BetsScreen({ state }) {
   const today = todayStr();
-  const sorted = useMemo(() => {
-    // Active first (by deadline asc), then resolved (most recent first)
-    const active = state.bets.filter(b => b.status === 'active').sort((a,b)=>a.deadline.localeCompare(b.deadline));
-    const resolved = state.bets.filter(b => b.status !== 'active').sort((a,b)=>(b.resolvedAt||'').localeCompare(a.resolvedAt||''));
-    return [...active, ...resolved];
-  }, [state.bets]);
+  const active = useMemo(() =>
+    state.bets.filter(b => b.status === 'active').sort((a,b) => a.deadline.localeCompare(b.deadline))
+  , [state.bets]);
 
-  if (sorted.length === 0) {
+  if (active.length === 0) {
     return (
       <div className="empty">
-        <strong>No bets yet.</strong>
-        Add one to put credits on the line.
+        <strong>No active bets.</strong>
+        Tap + to put credits on the line.
       </div>
     );
   }
 
   return (
     <div>
-      {sorted.map(bet => {
+      {active.map(bet => {
         const progress = betProgress(bet);
         const pct = Math.min(100, (progress / bet.target) * 100);
         const left = daysRemaining(bet);
@@ -786,15 +783,15 @@ function BetsScreen({ state }) {
 }
 
 // ----- ADD BET -----
-function AddBetScreen({ state, setState, onDone }) {
-  const [label, setLabel] = useState('');
-  const [target, setTarget] = useState(3);
-  const [deadline, setDeadline] = useState(addDays(todayStr(), 7));
-  const [odds, setOdds] = useState(2);
-  const [stake, setStake] = useState(1);
+function AddBetScreen({ state, setState, onDone, initial }) {
+  const [label, setLabel] = useState(initial?.label || '');
+  const [target, setTarget] = useState(initial?.target || 3);
+  const [days, setDays] = useState(initial?.days || 7);
+  const [odds, setOdds] = useState(initial?.odds || 2);
+  const [stake, setStake] = useState(initial?.stake || 1);
 
-  const minDate = todayStr();
-  const valid = label.trim().length > 0 && target >= 1 && deadline >= minDate && stake <= state.credits;
+  const deadline = addDays(todayStr(), days - 1); // day 1 means today is the only day, etc.
+  const valid = label.trim().length > 0 && target >= 1 && days >= 1 && stake <= state.credits;
 
   const submit = () => {
     if (!valid) return;
@@ -805,6 +802,7 @@ function AddBetScreen({ state, setState, onDone }) {
       deadline,
       odds,
       stake,
+      days,
       logs: {},
       status: 'active',
       createdAt: todayStr(),
@@ -840,14 +838,15 @@ function AddBetScreen({ state, setState, onDone }) {
       </div>
 
       <div className="field">
-        <label className="field-label">Deadline</label>
-        <input
-          className="input"
-          type="date"
-          value={deadline}
-          min={minDate}
-          onChange={e => setDeadline(e.target.value)}
-        />
+        <label className="field-label">Days to complete</label>
+        <div className="stepper">
+          <button onClick={() => setDays(Math.max(1, days-1))} disabled={days<=1}>−</button>
+          <div className="val">{days}</div>
+          <button onClick={() => setDays(Math.min(365, days+1))} disabled={days>=365}>+</button>
+        </div>
+        <div style={{marginTop:8,fontSize:13,color:'var(--text2)',paddingLeft:4}}>
+          Deadline: <strong style={{color:'var(--text)'}}>{formatDate(deadline)}</strong>
+        </div>
       </div>
 
       <div className="field">
@@ -1106,7 +1105,9 @@ function AddStoreItemScreen({ setState, onDone }) {
 }
 
 // ----- HISTORY -----
-function HistoryScreen({ state, setState }) {
+function HistoryScreen({ state, setState, onRebet }) {
+  const [selected, setSelected] = useState(null); // bet id
+
   const resolved = useMemo(() =>
     state.bets.filter(b => b.status !== 'active').sort((a,b)=>(b.resolvedAt||'').localeCompare(a.resolvedAt||''))
   , [state.bets]);
@@ -1115,6 +1116,7 @@ function HistoryScreen({ state, setState }) {
   const totalLost = resolved.filter(b => b.status==='lost').reduce((s,b)=>s + b.stake, 0);
 
   const usedItems = (state.usedItems || []).slice(0, 5);
+  const selectedBet = selected ? resolved.find(b => b.id === selected) : null;
 
   if (resolved.length === 0 && usedItems.length === 0) {
     return (
@@ -1124,6 +1126,13 @@ function HistoryScreen({ state, setState }) {
       </div>
     );
   }
+
+  // Calculate days for a bet (use stored value if present, otherwise derive from createdAt + deadline)
+  const betDays = (bet) => {
+    if (bet.days) return bet.days;
+    if (bet.createdAt && bet.deadline) return Math.max(1, daysBetween(bet.createdAt, bet.deadline) + 1);
+    return 7;
+  };
 
   return (
     <div>
@@ -1150,7 +1159,7 @@ function HistoryScreen({ state, setState }) {
       {resolved.length > 0 && resolved.map(bet => {
         const amt = bet.status==='won' ? bet.stake*bet.odds : bet.stake;
         return (
-          <div key={bet.id} className={`history-row ${bet.status}`}>
+          <div key={bet.id} className={`history-row ${bet.status}`} onClick={() => setSelected(bet.id)} style={{cursor:'pointer'}}>
             <div className="history-main">
               <div className="history-title">{bet.label}</div>
               <div className="history-meta">
@@ -1163,6 +1172,38 @@ function HistoryScreen({ state, setState }) {
           </div>
         );
       })}
+
+      {selectedBet && (
+        <div className="modal-overlay" onClick={() => setSelected(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h2>{selectedBet.label}</h2>
+            <p>
+              {selectedBet.status === 'won' ? 'You won this one.' : 'You lost this one.'} Stake {selectedBet.stake} · {selectedBet.odds}x · {betDays(selectedBet)} day{betDays(selectedBet)===1?'':'s'} · target {selectedBet.target}.
+            </p>
+            <button
+              className="primary-btn"
+              disabled={selectedBet.stake > state.credits}
+              onClick={() => {
+                vibrate(12);
+                onRebet({
+                  label: selectedBet.label,
+                  target: selectedBet.target,
+                  days: betDays(selectedBet),
+                  odds: selectedBet.odds,
+                  stake: selectedBet.stake,
+                });
+                setSelected(null);
+              }}
+            >
+              {selectedBet.stake > state.credits ? `Need ${selectedBet.stake} credits` : 'Bet again'}
+            </button>
+            <button
+              onClick={() => setSelected(null)}
+              style={{width:'100%',marginTop:10,padding:14,color:'var(--text2)',fontWeight:500,fontSize:15}}
+            >Cancel</button>
+          </div>
+        </div>
+      )}
 
       {usedItems.length > 0 && <>
         <div className="section-label">Recently used</div>
@@ -1227,6 +1268,7 @@ function App() {
   const [state, setState] = useState(() => reconcileBets(loadState()));
   const [tab, setTab] = useState('today');
   const [subScreen, setSubScreen] = useState(null); // 'add-store-item' | null
+  const [rebetInitial, setRebetInitial] = useState(null);
 
   // Save on every change
   useEffect(() => { saveState(state); }, [state]);
@@ -1282,13 +1324,13 @@ function App() {
     body = <BetsScreen state={state}/>;
   } else if (tab === 'add') {
     title = 'New bet';
-    body = <AddBetScreen state={state} setState={setState} onDone={() => setTab('bets')}/>;
+    body = <AddBetScreen state={state} setState={setState} initial={rebetInitial} onDone={() => { setRebetInitial(null); setTab('bets'); }}/>;
   } else if (tab === 'store') {
     title = 'Store';
     body = <StoreScreen state={state} setState={setState} goAdd={() => setSubScreen('add-store-item')}/>;
   } else if (tab === 'history') {
     title = 'History';
-    body = <HistoryScreen state={state} setState={setState}/>;
+    body = <HistoryScreen state={state} setState={setState} onRebet={(init) => { setRebetInitial(init); setTab('add'); }}/>;
   }
 
   return (
